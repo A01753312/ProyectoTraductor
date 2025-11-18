@@ -5,7 +5,16 @@ import joblib
 import time
 import os
 from gtts import gTTS
-from playsound import playsound
+try:
+    from playsound import playsound  # prefer playsound if available
+    _audio_player = "playsound"
+except Exception:
+    # fallback to python-vlc on Linux if playsound not installable
+    try:
+        import vlc
+        _audio_player = "vlc"
+    except Exception:
+        _audio_player = None
 
 # --- CONFIGURACIÓN ---
 MODEL_DIR = "models"
@@ -50,7 +59,18 @@ def speak_letter(letter):
     if not os.path.exists(audio_path):
         tts = gTTS(letter, lang='es')  # puedes usar 'en' si las letras son del ASL
         tts.save(audio_path)
-    playsound(audio_path)
+    if _audio_player == "playsound":
+        playsound(audio_path)
+    elif _audio_player == "vlc":
+        player = vlc.MediaPlayer(audio_path)
+        player.play()
+        # wait until playback starts
+        time.sleep(0.1)
+        # block until playback finishes
+        while player.is_playing():
+            time.sleep(0.1)
+    else:
+        print(f"[Aviso] No hay reproductor de audio disponible para {audio_path}")
 
 # --- INICIO DE CÁMARA ---
 cap = cv2.VideoCapture(0)
